@@ -49,6 +49,7 @@ public class MouseInteraction {
             if(display.getPlayButton().contains(mouseX, mouseY)){
                 prevMode = currMode;
                 currMode = "Game";
+                generator.generate();
                 reset();
             }
             if(display.getHelpButton().contains(mouseX, mouseY)){

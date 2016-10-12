@@ -115,7 +115,7 @@ public class Display {
         gameDisplay.setRGB(0, 0, WIDTH, generator.getHeight(), generator.getPixels(), 0, WIDTH);
         Graphics g = gameDisplay.getGraphics();
         
-         int color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
+        int color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
         
         
         g.setColor(Color.BLACK);

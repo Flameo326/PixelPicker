@@ -55,7 +55,7 @@ public class PixelPicker extends JFrame implements Runnable{
         addMouseListener(mousePos);
         addMouseMotionListener(mousePos);
         
-        generator.generate(); 
+        //generator.generate(); 
     }
     
     public void update(){
