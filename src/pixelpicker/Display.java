@@ -1,10 +1,14 @@
 
 package pixelpicker;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 
@@ -12,6 +16,9 @@ public class Display {
     
     private int WIDTH;
     private int HEIGHT;
+    private int xOffset;
+    private int yTopOffset;
+    private int yBotOffset;
     private int[] pixels;
     private Settings settings;
     
@@ -39,19 +46,21 @@ public class Display {
 
     int time = 0; // this should probably go into main class and be passed.
     
-    public Display(int width, int height, Settings _settings){
+    public Display(int width, int height, Insets inset, Settings _settings){
         WIDTH = width;
         HEIGHT = height;
+        xOffset = inset.left;
+        yTopOffset = inset.top;
+        yBotOffset = inset.bottom;
         pixels = new int[WIDTH * HEIGHT];
         settings = _settings;
         
         hover = new Color(0x5E5C5C);
         darkText = new Color(0x222222);
 
-        //Find some way to adjust if size is changed
-        titleFont = new Font("Times New Roman", Font.PLAIN, 32);
-        categoryFont = new Font("Times New Roman", Font.PLAIN, 24);
-        wordFont = new Font("Calibri", Font.PLAIN, 18);
+        titleFont = new Font("Times New Roman", Font.PLAIN, (int) (width *.0444));
+        categoryFont = new Font("Times New Roman", Font.PLAIN, (int) (width * .0333));
+        wordFont = new Font("Calibri", Font.PLAIN, (int) (width * .025));
         searchFormat = "RGB";
     }
     
@@ -66,38 +75,16 @@ public class Display {
         time++;
         BufferedImage titleDisplay = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics g = titleDisplay.getGraphics();
-        int color;
-        if(settings.isTextColored()){
-            color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
-        } else{
-            color = settings.getTextColor();
-        }
+        Color color = (settings.isTextColored()) ? new Color(Color.HSBtoRGB(time/360f, 1.0f, 0.5f)) : settings.getTextColor();   
         
-        playButton = new Rectangle(WIDTH/2-35, HEIGHT/2-15, 70, 20);
-        settingsButton = new Rectangle(WIDTH/2-35, HEIGHT/2+5, 70, 20);
-        helpButton = new Rectangle(WIDTH/2-35, HEIGHT/2+25, 70, 20);
-        
-        
-        g.setColor(new Color(color));
+        g.setColor(color);
         g.setFont(titleFont);
         g.drawString("Pixel Picker", (WIDTH-g.getFontMetrics().stringWidth("Pixel Picker"))/2, HEIGHT/4);        
         
-        g.setFont(wordFont);
-        g.setColor(hover);
-        if(playButtonHovered){            
-            g.fillRect(WIDTH/2-35, HEIGHT/2-15, 70, 20);
-        }
-        if(settingsButtonHovered){
-            g.fillRect(WIDTH/2-35, HEIGHT/2+5, 70, 20);
-        }
-        if(helpButtonHovered){           
-            g.fillRect(WIDTH/2-35, HEIGHT/2+25, 70, 20);
-        }
-        
-        g.setColor(new Color(color));
-        g.drawString("Play", (WIDTH-g.getFontMetrics().stringWidth("Play"))/2, HEIGHT/2); 
-        g.drawString("Settings", (WIDTH-g.getFontMetrics().stringWidth("Settings"))/2, HEIGHT/2+20);
-        g.drawString("Help", (WIDTH-g.getFontMetrics().stringWidth("Help"))/2, HEIGHT/2+40); 
+        g.setFont(wordFont);        
+        playButton = drawButton(g, "Play", WIDTH/2-2*xOffset, HEIGHT/2+yTopOffset-yBotOffset-g.getFontMetrics().getHeight(), color, playButtonHovered);
+        settingsButton = drawButton(g, "Settings", WIDTH/2-2*xOffset, HEIGHT/2+yTopOffset-yBotOffset, color, settingsButtonHovered);
+        helpButton = drawButton(g, "Help", WIDTH/2-2*xOffset, HEIGHT/2+yTopOffset-yBotOffset+g.getFontMetrics().getHeight(), color, helpButtonHovered);
         
         titleDisplay.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
         titleDisplay.flush();
@@ -108,64 +95,40 @@ public class Display {
     
     public void gameDisplay(Generator generator){
         time++;
-        //play button refers to the game area in this situation !!!!!
-        
-        
         BufferedImage gameDisplay = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         gameDisplay.setRGB(0, 0, WIDTH, generator.getHeight(), generator.getPixels(), 0, WIDTH);
         Graphics g = gameDisplay.getGraphics();
-        
-        int color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
-        
-        
+        Color color = (settings.isTextColored()) ? new Color(Color.HSBtoRGB(time/360f, 1.0f, 0.5f)) : settings.getTextColor();
+     
         g.setColor(Color.BLACK);
-        g.setFont(wordFont);
-        int middlePoint = (HEIGHT-generator.getHeight())/3 + generator.getHeight()+g.getFontMetrics().getHeight()/4;
-        int bottomPoint = (HEIGHT-generator.getHeight())*2/3 + generator.getHeight()+g.getFontMetrics().getHeight()/4;
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setStroke(new BasicStroke((WIDTH/1000)+1));
+        if(tileSelected != null) {g2.drawRect(tileSelected.x, tileSelected.y, tileSelected.width, tileSelected.height); }
+        
+        g.setColor(new Color(Color.HSBtoRGB(~time/360f, 1.0f, 0.5f)));
+        Rectangle infoArea = new Rectangle(2*xOffset, generator.getHeight()+yBotOffset, WIDTH-4*xOffset, HEIGHT-generator.getHeight()-3*yBotOffset);
+        g.fillRect(infoArea.x, infoArea.y, infoArea.width, infoArea.height);
         
         // play refers to Back Button...
-        playButton = new Rectangle((int) (WIDTH*7/8-g.getFontMetrics().stringWidth("Back")*1.2),
-                bottomPoint-g.getFontMetrics().getAscent(), 40, 20);
-        generateButton =  new Rectangle(WIDTH*3/4-2, middlePoint-g.getFontMetrics().getAscent(), 150, 20);    
-        settingsButton = new Rectangle(WIDTH*7/8-2, bottomPoint-g.getFontMetrics().getAscent(), 70, 20);
-        helpButton = new Rectangle(WIDTH*3/4-2, bottomPoint-g.getFontMetrics().getAscent(), 40, 20);
-        tileButton = new Rectangle(WIDTH*5/8-2, middlePoint-g.getFontMetrics().getAscent()*2, 80, 50);
+        // May need to change the color for based on User. Could make background different color as well... 
+        g.setFont(wordFont); 
+        g.setColor(color);
+        String temp = "Settings";
+        settingsButton = drawButton(g, temp, (int) (WIDTH*.98-g.getFontMetrics().stringWidth(temp)/2), (int) (HEIGHT*.95-g.getFontMetrics().getAscent()/2), color, settingsButtonHovered);
+        temp = "Back";
+        playButton = drawButton(g, temp, (int)(settingsButton.x-g.getFontMetrics().stringWidth(temp)/2-HEIGHT*.07), (int)settingsButton.getCenterY(), color, playButtonHovered);
+        temp = "Help";
+        helpButton = drawButton(g, temp, (int)(playButton.x-g.getFontMetrics().stringWidth(temp)/2-HEIGHT*.07), (int)settingsButton.getCenterY(), color, helpButtonHovered);
+        temp = "Generate New Tiles";
+        generateButton = drawButton(g, temp, (int) (WIDTH*.98-g.getFontMetrics().stringWidth(temp)/2), (int)(settingsButton.y-g.getFontMetrics().getAscent()-HEIGHT*.02), color, generateButtonHovered);
+        temp = "New Tile";
+        tileButton = drawButton(g, temp, (int)(generateButton.x-g.getFontMetrics().stringWidth(temp)/2-HEIGHT*.02), (int)generateButton.getCenterY()+g.getFontMetrics().getAscent()/2, color, tileButtonHovered);
+        temp = "Select A";
+        tileButton = tileButton.union(drawButton(g, temp, (int)tileButton.getCenterX(), (int)generateButton.getCenterY()-g.getFontMetrics().getAscent()/2, color, tileButtonHovered));
         
-        if(tileSelected != null){
-            g.drawRect(tileSelected.x, tileSelected.y, tileSelected.width, tileSelected.height);
-        }
-        g.drawRect(0, generator.getHeight(), WIDTH, HEIGHT-generator.getHeight());        
-        g.setColor(new Color(color));
-        g.fillRect(5, generator.getHeight()+2, WIDTH-10, HEIGHT-generator.getHeight()-7);
-
-        g.setColor(hover);
-        if(settingsButtonHovered){
-            g.fillRect(WIDTH*7/8-2, bottomPoint-g.getFontMetrics().getAscent(), 70, 20);
-        }
-        if(helpButtonHovered){           
-            g.fillRect(WIDTH*3/4-2, bottomPoint-g.getFontMetrics().getAscent(), 40, 20);
-        }
-        if(generateButtonHovered){
-            g.fillRect(WIDTH*3/4-2, middlePoint-g.getFontMetrics().getAscent(), 150, 20);
-        }
-        if(tileButtonHovered){
-            g.fillRect(WIDTH*5/8-2, (int) (middlePoint-g.getFontMetrics().getAscent()*1.5), 70, 40);
-        }
-        if(playButtonHovered){
-            g.fillRect((int) (WIDTH*7/8-g.getFontMetrics().stringWidth("Back")*1.2),
-                    bottomPoint-g.getFontMetrics().getAscent(), 40, 20);
-        }
-        //System.out.println(middlePoint + ". " + bottomPoint + "   " + g.getFontMetrics().getHeight());
-        g.setColor(Color.WHITE);
-        g.drawString("Your " + searchFormat + " Value is: " + format(generator.getTileValue()), 20, middlePoint);
-        g.drawString("Generate New Tiles", WIDTH*3/4, middlePoint);
-        g.drawString("Settings", WIDTH*7/8, bottomPoint);
-        g.drawString("Help", WIDTH*3/4, bottomPoint);
-        g.drawString("Select A", WIDTH*5/8, middlePoint-g.getFontMetrics().getAscent()/2);
-        g.drawString("New Tile", WIDTH*5/8, middlePoint+g.getFontMetrics().getAscent()/2);
-        g.drawString("Back", (int) (WIDTH*7/8-g.getFontMetrics().stringWidth("Back")*1.2), bottomPoint);
+        g.drawString("Your " + searchFormat + " Value is: " + format(generator.getTileValue()), (int) (infoArea.x+WIDTH*.02), (int) (generateButton.getCenterY()+g.getFontMetrics().getAscent()/2));
         if(selected){
-            g.drawString(answerString, 20, bottomPoint);
+            g.drawString(answerString, (int) (infoArea.x+WIDTH*.02), (int) (settingsButton.getCenterY()+g.getFontMetrics().getAscent()/2));
         }
         
         gameDisplay.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
@@ -176,107 +139,92 @@ public class Display {
         time++;
         BufferedImage settingsDisplay = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         Graphics g = settingsDisplay.getGraphics();
-        int color;
-        if(settings.isTextColored()){
-            color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
-        } else{
-            color = settings.getTextColor();
-        }
+        Color color = (settings.isTextColored()) ? new Color(Color.HSBtoRGB(time/360f, 1.0f, 0.5f)) : settings.getTextColor();
+        FontMetrics fm;
+        String temp;
         
+        g.setColor(color);
         g.setFont(titleFont);
-        g.setColor(new Color(color));
-        g.drawString("Settings", WIDTH/2-g.getFontMetrics().stringWidth("Settings")/2, HEIGHT/7);
+        fm = g.getFontMetrics();
+        g.drawString("Settings", WIDTH/2-g.getFontMetrics().stringWidth("Settings")/2, 2*yTopOffset+g.getFontMetrics().getAscent());
         
         g.setFont(categoryFont);
-        g.drawString("Text", WIDTH/4-g.getFontMetrics().stringWidth("Text")*2, HEIGHT/6+g.getFontMetrics().getAscent());
-        g.drawString("Program", WIDTH*2/4-g.getFontMetrics().stringWidth("Program")/2, HEIGHT/6+g.getFontMetrics().getAscent());
-        g.drawString("Game", WIDTH*3/4+g.getFontMetrics().stringWidth("Game")/2, HEIGHT/6+g.getFontMetrics().getAscent());
+        fm = g.getFontMetrics();
+        int textPos = WIDTH/4+fm.stringWidth("Text")/2; //
+        int progPos = WIDTH/2; // Center
+        int gamePos = WIDTH*3/4-fm.stringWidth("Game")/2;
+        g.drawString("Text", textPos-fm.stringWidth("Text"), HEIGHT/6+fm.getAscent());
+        g.drawString("Program", progPos-fm.stringWidth("Program")/2, HEIGHT/6+fm.getAscent());
+        g.drawString("Game", gamePos, HEIGHT/6+fm.getAscent());
         
         g.setFont(wordFont);
+        fm = g.getFontMetrics();
+        temp = "Difficulty: ";
+        g.drawString(temp, gamePos, HEIGHT/6+2*fm.getHeight());
         
-        playButton = new Rectangle(WIDTH/20, HEIGHT/4, 10, 10);
-        if(playButtonHovered){
-            g.setColor(hover);
-            g.fillRect(WIDTH/20, HEIGHT/4, 10, 10);
+        temp = settings.getDifficulty();
+        helpButton = drawButton(g, temp, gamePos+fm.stringWidth("Difficulty: ")+fm.stringWidth(temp)/2, HEIGHT/6+2*fm.getHeight()-fm.getAscent()/2, color, helpButtonHovered);
+        
+        temp = "Search Mode: ";
+        g.drawString(temp, gamePos, HEIGHT/6+3*fm.getHeight());
+        
+        temp = settings.getSearchFormat();
+        settingsButton = drawButton(g, temp, gamePos+fm.stringWidth("Search Mode: ")+fm.stringWidth(temp)/2, HEIGHT/6+3*fm.getHeight()-fm.getAscent()/2, color, settingsButtonHovered);
+        
+        temp = "Back";
+        generateButton = drawButton(g, temp, g.getFontMetrics().stringWidth(temp)/2+2*xOffset, HEIGHT-4*yBotOffset-g.getFontMetrics().getAscent()/2, color, generateButtonHovered);
+        
+        temp = "  "; // Box placement and manual setup
+        playButton = new Rectangle(textPos-fm.stringWidth(temp), HEIGHT/6+2*fm.getHeight()-fm.stringWidth(temp), fm.stringWidth(temp), fm.stringWidth(temp));
+        
+        temp = "Colored Text";
+        g.drawString(temp, playButton.x-fm.stringWidth(temp + " "), playButton.y+playButton.height);
+        
+        g.drawRect(playButton.x, playButton.y, playButton.width, playButton.height);
+        if(playButtonHovered){ // Hovering
+          g.setColor(hover);
+          g.fillRect(playButton.x, playButton.y, playButton.width, playButton.height);
+          g.setColor(color);
         }
-        g.setColor(new Color(color));
-        g.drawRect(WIDTH/20, HEIGHT/4, 10, 10);
-        g.drawString("Colored Text", WIDTH/20 + 15, HEIGHT/4+g.getFontMetrics().getAscent()*2/3);
-        if(settings.isTextColored()){
-            g.drawLine(WIDTH/20+2, HEIGHT/4+2, WIDTH/20+5, HEIGHT/4+8);
-            g.drawLine(WIDTH/20+5, HEIGHT/4+8, WIDTH/20+8, HEIGHT/4+2);
-            g.setColor(darkText);
-        }       
-        g.drawString("Text Color: " + Integer.toHexString(settings.getTextColor()),
-                WIDTH/20, HEIGHT/4+15+g.getFontMetrics().getAscent()*2/3);        
+        if(settings.isTextColored()){ // If text is colored
+        	Graphics2D g2 = (Graphics2D) g;
+        	g2.setStroke(new BasicStroke((WIDTH/1000)+1));
+        	g2.drawLine(playButton.x-playButton.width/4, playButton.y+playButton.height/4, playButton.x+playButton.width/2, playButton.y+playButton.height*5/6);
+	        g2.drawLine(playButton.x+playButton.width/2, playButton.y+playButton.height*5/6, playButton.x+playButton.width*4/3, playButton.y-playButton.height/4);
+	        g.setColor(darkText);
+        }
         
-        g.setColor(new Color(color));
-        g.drawString("Width, Height", WIDTH*2/4-g.getFontMetrics().stringWidth("Width, Height")/2,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3);
-        g.drawLine(WIDTH*2/4-g.getFontMetrics().stringWidth("Width, Height")/2-5,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3 + 5,
-                WIDTH*2/4+g.getFontMetrics().stringWidth("Width, Height")/2+5,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3 + 5);    
-        Dimension temp = settings.getDimension();
-        g.drawString(temp.width + ", " + temp.height, 
-                WIDTH*2/4-g.getFontMetrics().stringWidth(temp.width + ", " + temp.height)/2,
-                HEIGHT/4+20+g.getFontMetrics().getAscent()*2/3);
+        temp = settings.getTextColorString();
+        tileButton = drawButton(g, temp, textPos-fm.stringWidth(temp)/2, HEIGHT/6+3*fm.getHeight()-fm.getAscent()/2, g.getColor(), (settings.isTextColored()) ? false : tileButtonHovered);
+        
+        temp = "Text Color: " + temp;
+        g.drawString("Text Color: ", textPos-fm.stringWidth(temp), HEIGHT/6+3*fm.getHeight());                
+        
+        g.setColor(color);
+        temp = "Width, Height";
+        g.drawString(temp, progPos-g.getFontMetrics().stringWidth(temp)/2, HEIGHT/6+2*fm.getHeight());
+        g.drawLine(progPos-g.getFontMetrics().stringWidth(temp), HEIGHT/6+2*fm.getHeight()+yBotOffset,
+        		progPos+g.getFontMetrics().stringWidth(temp), HEIGHT/6+2*fm.getHeight()+yBotOffset); 
+        
+        temp = WIDTH + " " + HEIGHT;
+        tileSelected = drawButton(g, temp, progPos, HEIGHT/6+3*fm.getHeight()-fm.getAscent()/2, color, selected);
+//        Dimension dimension = settings.getDimension();
+//        g.drawString(dimension.width + ", " + dimension.height, 
+//                WIDTH*2/4-g.getFontMetrics().stringWidth(dimension.width + ", " + dimension.height)/2,
+//                HEIGHT/4+20+g.getFontMetrics().getAscent()*2/3);
             // we need to display the current W and H and add interaction
-        
-        
-        helpButton = new Rectangle(WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Difficulty: " + settings.getDifficulty())/2+g.getFontMetrics().stringWidth("Difficulty: ")-2,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3-g.getFontMetrics().getAscent(),
-                g.getFontMetrics().stringWidth(settings.getDifficulty())+5, 20);
-        if(helpButtonHovered){
-            g.setColor(hover);
-            g.fillRect(WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Difficulty: " + settings.getDifficulty())/2+g.getFontMetrics().stringWidth("Difficulty: ")-2,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3-g.getFontMetrics().getAscent(),
-                g.getFontMetrics().stringWidth(settings.getDifficulty())+5, 22);
-        }       
-        g.setColor(new Color(color));
-        g.drawString("Difficulty: " + settings.getDifficulty(),
-                WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Difficulty: " + settings.getDifficulty())/2,
-                HEIGHT/4+g.getFontMetrics().getAscent()*2/3);
-        // display difficulty
-        
-        settingsButton = new Rectangle(WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Search Mode: " + settings.getSearchFormat())/2+g.getFontMetrics().stringWidth("Search Mode: "), 
-        HEIGHT/4+20+g.getFontMetrics().getAscent()*2/3-g.getFontMetrics().getAscent(),
-        g.getFontMetrics().stringWidth(settings.getSearchFormat())+5, 20);
-        if(settingsButtonHovered){
-            g.setColor(hover);
-            g.fillRect(WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Search Mode: " + settings.getSearchFormat())/2+g.getFontMetrics().stringWidth("Search Mode: "), 
-        HEIGHT/4+20+g.getFontMetrics().getAscent()*2/3-g.getFontMetrics().getAscent(),
-        g.getFontMetrics().stringWidth(settings.getSearchFormat())+5, 20);
-        }
-        g.setColor(new Color(color));
-        g.drawString("Search Mode: " + settings.getSearchFormat(),
-                WIDTH*3/4+g.getFontMetrics().stringWidth("Game")-g.getFontMetrics().stringWidth("Search Mode: " + settings.getSearchFormat())/2,
-                HEIGHT/4+20+g.getFontMetrics().getAscent()*2/3);
-        
-        generateButton = new Rectangle(7, HEIGHT-10-g.getFontMetrics().getAscent(), g.getFontMetrics().stringWidth("Back"), 20);
-        if(generateButtonHovered){
-            g.setColor(hover);
-            g.fillRect(7-2, HEIGHT-10-g.getFontMetrics().getAscent(), g.getFontMetrics().stringWidth("Back")+4, 20);
-            g.setColor(new Color(color));
-        }
-        g.drawString("Back", 7, HEIGHT-10);
         
         settingsDisplay.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
         settingsDisplay.flush();
     }
     
     public void helpDisplay(){
-        time++;
+        time++;     
         BufferedImage helpDisplay = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-        int color = (settings.isTextColored()) ? Color.HSBtoRGB(time/360f, 1.0f, 0.5f) : settings.getTextColor();
-//        if(settings.getColoredText()) {
-//        		color = Color.HSBtoRGB(time/360f, 1.0f, 0.5f);
-//        } else{
-//            color = settings.getTextColor();
-//        }
-        
         Graphics g = helpDisplay.getGraphics();
-        g.setColor(new Color(color));
+        Color color = (settings.isTextColored()) ? new Color(Color.HSBtoRGB(time/360f, 1.0f, 0.5f)) : settings.getTextColor();
+        
+        g.setColor(color);
         g.setFont(titleFont);
         g.drawString("Help - How To Play", (WIDTH-g.getFontMetrics().stringWidth("Help - How To Play"))/2, HEIGHT/6);
                 
@@ -290,7 +238,7 @@ public class Display {
         temp = "The game is fairly simple, all you have to do is ";
         g.drawString(temp, (WIDTH-g.getFontMetrics().stringWidth(temp))/2, HEIGHT/5 + HEIGHT*3/13);
         
-        temp = "guess the color corellated to the value you are given";
+        temp = "guess the color corellated to the value you are given.";
         g.drawString(temp, (WIDTH-g.getFontMetrics().stringWidth(temp))/2, HEIGHT/5 + HEIGHT*7/26);
         
         temp = "You can change the form that the value is given ";
@@ -315,28 +263,34 @@ public class Display {
         g.drawString(temp, (WIDTH-g.getFontMetrics().stringWidth(temp))/2, HEIGHT/5 + HEIGHT*17/26);
         
         temp = "Back";
-        tileButton = new Rectangle(5, HEIGHT/5 + HEIGHT*20/26-g.getFontMetrics().getAscent(),
-                g.getFontMetrics().stringWidth(temp)+2, 20);
-        if(tileButtonHovered){
-            g.setColor(hover);
-            g.fillRect(5, HEIGHT/5 + HEIGHT*20/26-g.getFontMetrics().getAscent(), g.getFontMetrics().stringWidth(temp)+2, 20);
-        }
-        g.setColor(new Color(color));
-        g.drawString(temp, 5, HEIGHT/5 + HEIGHT*20/26);
+        tileButton = drawButton(g, temp, g.getFontMetrics().stringWidth(temp)/2+2*xOffset, HEIGHT-4*yBotOffset-g.getFontMetrics().getAscent()/2, color, tileButtonHovered);
         
         temp = "Try it!";
-        playButton = new Rectangle(WIDTH-g.getFontMetrics().stringWidth(temp)-12,
-                HEIGHT/5 + HEIGHT*20/26-g.getFontMetrics().getAscent(), g.getFontMetrics().stringWidth(temp)+2, 20);
-        if(playButtonHovered){
-            g.setColor(hover);
-            g.fillRect(WIDTH-g.getFontMetrics().stringWidth(temp)-12, HEIGHT/5 + HEIGHT*20/26-g.getFontMetrics().getAscent(),
-                    g.getFontMetrics().stringWidth(temp)+2, 20);
-        }
-        g.setColor(new Color(color));
-        g.drawString(temp, WIDTH-g.getFontMetrics().stringWidth(temp)-10, HEIGHT/5 + HEIGHT*20/26);
-             
+        playButton = drawButton(g, temp, WIDTH-3*xOffset-g.getFontMetrics().stringWidth(temp)/2, HEIGHT-4*yBotOffset-g.getFontMetrics().getAscent()/2, color, playButtonHovered);    
+        
         helpDisplay.getRGB(0, 0, WIDTH, HEIGHT, pixels, 0, WIDTH);
         helpDisplay.flush();
+    }
+
+    public Rectangle drawButton(Graphics g, String s, int midX, int midY, Color c, boolean buttonHover){
+    	FontMetrics fm = g.getFontMetrics();
+    	int sWidth = fm.stringWidth(s);
+    	int sAscent = fm.getAscent();
+    	
+    	int xPoint = midX-sWidth/2;
+    	int yPoint = midY-sAscent/2;
+    	int width = sWidth;
+    	int height = sAscent;  	
+    	Rectangle rect = new Rectangle(xPoint, yPoint, width, height);
+    	
+		if(buttonHover){
+            g.setColor(hover);
+            g.fillRect(rect.x, (int) (rect.y+sAscent*.1), rect.width, rect.height);
+		}	
+    	g.setColor(c);
+        g.drawString(s, rect.x, rect.y + sAscent);
+    			
+    	return rect;
     }
     
     public String format(int tileValue){

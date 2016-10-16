@@ -46,11 +46,11 @@ public class MouseInteraction {
     
     private void interactTitle(){
         if("Clicked".equals(action)){
-            if(display.getPlayButton().contains(mouseX, mouseY)){
+            if(display.getPlayButton().contains(mouseX, mouseY)){        	
                 prevMode = currMode;
                 currMode = "Game";
-                generator.generate();
                 reset();
+                generator.generate();         
             }
             if(display.getHelpButton().contains(mouseX, mouseY)){
                 prevMode = currMode;
@@ -136,13 +136,16 @@ public class MouseInteraction {
                 currMode = prevMode;
                 reset();
             }
+            if(display.getTileButton().contains(mouseX, mouseY)){
+            	settings.toggleColor();
+            }
         } 
         if("Moved".equals(action)){
             display.setPlayButtonHovered(display.getPlayButton().contains(mouseX, mouseY));
             display.setHelpButtonHovered(display.getHelpButton().contains(mouseX, mouseY));
             display.setSettingsButtonHovered(display.getSettingsButton().contains(mouseX, mouseY));
             display.setGenerateButtonHovered(display.getGenerateButton().contains(mouseX, mouseY));
-            //display.tileButtonHovered = display.getTileButton().contains(mouseX, mouseY);
+            display.setTileButtonHovered(display.getTileButton().contains(mouseX, mouseY));
         }
     }
     

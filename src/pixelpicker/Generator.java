@@ -1,6 +1,7 @@
 
 package pixelpicker;
 
+import java.awt.Insets;
 import java.awt.Rectangle;
 import java.util.Random;
 
@@ -15,11 +16,11 @@ public class Generator {
     private boolean startingTiles;
     private String currDiff;
     
-    public Generator(int width, int height, int _xSize, int _ySize, String difficulty){
+    public Generator(int width, int height, int _xSize, int _ySize, Insets inset, String difficulty){
         WIDTH = width;
         HEIGHT = height;
-        xOffset = 3;
-        yOffset = 26;
+        xOffset = inset.left;
+        yOffset = inset.top;
         pixels = new int[WIDTH*HEIGHT];
 //        xSize = (WIDTH - xOffset*2)/xAmo;
 //        ySize = (HEIGHT - yOffset)/yAmo;
@@ -126,7 +127,6 @@ public class Generator {
     public int getHeight(){
         return HEIGHT;
     }
-    
 }
 /*
 

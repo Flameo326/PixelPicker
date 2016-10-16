@@ -3,17 +3,19 @@ package pixelpicker;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import javax.swing.JFrame;
 
 public class PixelPicker extends JFrame implements Runnable{
-    
-    private boolean running;
+	private static final long serialVersionUID = 1L;
+	
+	private boolean running;
     private Dimension size;
-    private int WIDTH = 1080;
-    private int HEIGHT = 720;
+    private int WIDTH;
+    private int HEIGHT;
     private String currMode;
     
     private BufferedImage image;
@@ -30,32 +32,34 @@ public class PixelPicker extends JFrame implements Runnable{
     
     
     public PixelPicker(){ 
+    	pack();
         setTitle("Pixel Picker");
-        //maybe should adjust based on system resolution or size... 
-        setSize(size = new Dimension(WIDTH, HEIGHT));
+        setSize(size = Toolkit.getDefaultToolkit().getScreenSize());
+        //setSize(size = new Dimension(1080, 720));
+        //setSize(size = new Dimension(720, 480));
         setResizable(false);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);        
         setVisible(true);
 
+        WIDTH = size.width;
+        HEIGHT = size.height;
         currMode = "Title";
-        running = true; // ? Do i really need this?
-
+        running = true; 
+        
         image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
         xTileSize = WIDTH/5;
         yTileSize = HEIGHT*3/4/5;
         difficulty = "Easy";
-        generator = new Generator(WIDTH, HEIGHT*3/4, xTileSize, yTileSize, difficulty); 
+        generator = new Generator(WIDTH, HEIGHT*3/4, xTileSize, yTileSize, getInsets(), difficulty); 
         settings = new Settings(WIDTH, HEIGHT); // Should I pass the previous variables for initialization?
-        display = new Display(WIDTH, HEIGHT, settings); //Will somewhat glitch if generator takes a while generate, ??? make a temporary genertor display? need thread?  
+        display = new Display(WIDTH, HEIGHT, getInsets(), settings); //Will somewhat glitch if generator takes a while generate, ??? make a temporary genertor display? need thread?  
         mouseInter = new MouseInteraction(currMode, display, generator, settings);
         mousePos = new MousePosition(mouseInter);
         
         addMouseListener(mousePos);
         addMouseMotionListener(mousePos);
-        
-        //generator.generate(); 
     }
     
     public void update(){
